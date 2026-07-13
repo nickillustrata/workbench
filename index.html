@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
    Workbench — design tokens
@@ -340,10 +341,54 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
   .brand small{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- login gate ---------- */
+.login-screen{
+  position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(1200px 600px at 50% -10%,var(--navy-700),var(--navy-900));
+}
+.login-card{
+  width:min(380px,92vw);background:var(--card);border-radius:14px;box-shadow:var(--shadow-lg);
+  padding:30px 28px;display:flex;flex-direction:column;
+}
+.login-brand{display:flex;align-items:center;justify-content:center;gap:11px;font-weight:700;font-size:19px;color:var(--ink);margin-bottom:6px}
+.login-brand .mark{
+  width:30px;height:30px;border-radius:8px;flex:none;
+  background:linear-gradient(135deg,var(--teal-500),var(--teal-600));
+  display:grid;place-items:center;font-weight:800;color:#04211f;font-size:17px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);
+}
+.login-sub{text-align:center;color:var(--ink-faint);font-size:12.5px;margin:0 0 22px}
+.login-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px}
+.login-card input{
+  width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;margin-bottom:14px;
+}
+.login-card input:focus{outline:none;border-color:var(--teal-500)}
+.login-card .btn{width:100%;justify-content:center;padding:11px;font-size:14px;margin-top:2px}
+.login-card .btn[disabled]{opacity:.6;cursor:default}
+.login-error{color:var(--hi);font-size:12.5px;line-height:1.4;min-height:17px;margin-bottom:8px}
+
+/* ---------- sign out ---------- */
+.signout-btn{padding:7px 12px;border-radius:8px;color:#c6d6e4;font-weight:600;font-size:13px}
+.signout-btn:hover{background:rgba(255,255,255,.12);color:#fff}
 </style>
 </head>
 <body>
-<div class="app">
+<!-- ===================== LOGIN GATE ===================== -->
+<div class="login-screen" id="loginScreen" style="display:none">
+  <form class="login-card" id="loginForm">
+    <div class="login-brand"><div class="mark">W</div><div>Workbench</div></div>
+    <p class="login-sub">Sign in to sync your workspace</p>
+    <label class="login-label" for="loginEmail">Email</label>
+    <input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+    <label class="login-label" for="loginPassword">Password</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+    <div class="login-error" id="loginError" role="alert"></div>
+    <button class="btn" type="submit" id="loginSubmit">Sign in</button>
+  </form>
+</div>
+
+<div class="app" id="app" style="display:none">
   <!-- ===================== TOP BAR ===================== -->
   <header class="topbar">
     <div class="brand">
@@ -363,6 +408,7 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
     <button class="iconbtn on" id="toggleNotes" title="Toggle notes (Alt+N)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H8l-4 4z"/></svg>
     </button>
+    <button class="signout-btn" id="signOut" title="Sign out">Sign out</button>
   </header>
 
   <!-- ===================== BODY ===================== -->
@@ -458,21 +504,58 @@ const dueState = s => {
 };
 
 /* ============================================================
-   STORAGE — swap this class to move off localStorage.
-   Contract: load() -> state object; save(state) -> void/Promise.
+   STORAGE — Supabase-backed, with localStorage as offline cache.
+   Contract: load() -> Promise<state|null>; save(state) -> Promise.
+   One row per user in `workbench_state`, keyed by user_id; the
+   whole app state lives in the `data` JSON column. RLS keeps each
+   person to their own row (see schema note at the bottom of file).
    ============================================================ */
 const STORAGE_KEY = 'workbench.v1';
-class LocalStore {
-  load(){
+const SUPABASE_URL = 'https://ujogoeyyzxfwnzkhzksn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ituTPyOjYzNwY7v62MSNMw_Iu5FmRb4';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+class SupabaseStore {
+  constructor(client){ this.client = client; this.userId = null; }
+
+  cacheLocal(state){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ console.warn('local cache failed', e); }
+  }
+  loadLocal(){
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
     catch { return null; }
   }
-  save(state){
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    catch(e){ console.warn('save failed', e); }
+
+  async load(){
+    if (!this.userId) return this.loadLocal();
+    try {
+      const { data, error } = await this.client
+        .from('workbench_state')
+        .select('data')
+        .eq('user_id', this.userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (data && data.data != null){ this.cacheLocal(data.data); return data.data; }
+      return this.loadLocal(); // no remote row yet — fall back to cache if present
+    } catch(e){
+      console.warn('Supabase load failed — using local cache', e);
+      return this.loadLocal();
+    }
+  }
+
+  async save(state){
+    this.cacheLocal(state); // always keep the offline cache current
+    if (!this.userId) return;
+    try {
+      const { error } = await this.client
+        .from('workbench_state')
+        .upsert({ user_id: this.userId, data: state }, { onConflict: 'user_id' });
+      if (error) throw error;
+    } catch(e){ console.warn('Supabase save failed — cached locally', e); }
   }
 }
-const Store = new LocalStore();
+const Store = new SupabaseStore(sb);
 
 /* ---------- seed / state ---------- */
 const starterLinks = () => ([
@@ -498,20 +581,32 @@ const seed = () => ({
   ui: { view:'tasks', sort:'open', notesOpen:true, activeNoteId:null, weekStart: iso(mondayOf(new Date())) },
 });
 
-let S = Store.load() || seed();
-// migrate / guard fields
-S.ui = Object.assign({ view:'tasks', sort:'open', notesOpen:true, activeNoteId:null, weekStart: iso(mondayOf(new Date())) }, S.ui || {});
-S.buckets ||= []; S.tasks ||= []; S.notes ||= [];
-if (!S.links) S.links = starterLinks();
-if (!S.clients) S.clients = ['Revel One','KH','Arcus','Avocet','Prosperity','Ibexis'];
-S.tasks.forEach(t => { t.scheduledDate ??= ''; t.notes ??= ''; t.priority ??= null; t.client ??= ''; t.future ??= false; t.subtasks ??= []; });
-if (!S.ui.activeNoteId && S.notes[0]) S.ui.activeNoteId = S.notes[0].id;
+let S; // populated by startApp() after auth + async load
+
+// migrate / guard fields (run once state is loaded)
+function normalizeState(){
+  S.ui = Object.assign({ view:'tasks', sort:'open', notesOpen:true, activeNoteId:null, weekStart: iso(mondayOf(new Date())) }, S.ui || {});
+  S.buckets ||= []; S.tasks ||= []; S.notes ||= [];
+  if (!S.links) S.links = starterLinks();
+  if (!S.clients) S.clients = ['Revel One','KH','Arcus','Avocet','Prosperity','Ibexis'];
+  S.tasks.forEach(t => { t.scheduledDate ??= ''; t.notes ??= ''; t.priority ??= null; t.client ??= ''; t.future ??= false; t.subtasks ??= []; });
+  if (!S.ui.activeNoteId && S.notes[0]) S.ui.activeNoteId = S.notes[0].id;
+}
 
 let searchQ = '';
 let openEditor = null; // task id whose editor is open
 let openLinkEditor = null; // link item id whose editor is open
 
-const save = () => Store.save(S);
+/* Debounced save: cache to localStorage immediately (offline-safe),
+   push to Supabase at most once every ~750ms so typing doesn't hammer the DB. */
+let saveTimer = null;
+const save = () => {
+  if (!S) return;
+  Store.cacheLocal(S);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveTimer = null; Store.save(S); }, 750);
+};
+window.addEventListener('beforeunload', () => { if (S){ clearTimeout(saveTimer); Store.save(S); } });
 const toast = (() => {
   const t = $('#toast'); let timer;
   return msg => { t.textContent = msg; t.classList.add('show'); clearTimeout(timer); timer = setTimeout(()=>t.classList.remove('show'), 1600); };
@@ -1093,33 +1188,91 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); $('#search').focus(); }
 });
 
-render();
+/* ============================================================
+   AUTH GATE — check session before the app renders
+   ============================================================ */
+const loginScreen = $('#loginScreen');
+const appEl = $('#app');
+
+function showLogin(){
+  appEl.style.display = 'none';
+  loginScreen.style.display = 'grid';
+  $('#loginError').textContent = '';
+  requestAnimationFrame(() => $('#loginEmail').focus());
+}
+
+async function startApp(){
+  loginScreen.style.display = 'none';
+  appEl.style.display = 'flex';
+  S = (await Store.load()) || seed();
+  normalizeState();
+  render();
+}
+
+// sign in
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('#loginEmail').value.trim();
+  const password = $('#loginPassword').value;
+  const errEl = $('#loginError'); errEl.textContent = '';
+  const btn = $('#loginSubmit'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Signing in…';
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error){ errEl.textContent = error.message; return; }
+    Store.userId = data.user.id;
+    $('#loginPassword').value = '';
+    await startApp();
+  } catch(err){
+    errEl.textContent = err.message || 'Sign in failed. Please try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+});
+
+// sign out
+$('#signOut').addEventListener('click', async () => {
+  if (S){ clearTimeout(saveTimer); await Store.save(S); }
+  await sb.auth.signOut();
+  Store.userId = null; S = null;
+  showLogin();
+});
+
+// on load: resume an existing session or show the login screen
+(async () => {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session){ Store.userId = session.user.id; await startApp(); }
+    else showLogin();
+  } catch(e){
+    console.warn('Session check failed', e);
+    showLogin();
+  }
+})();
 </script>
 
 <!--
 ================================================================
- SUPABASE — next iteration (leave localStorage running until then)
+ SUPABASE — backing table (must exist for sync to work)
 ================================================================
-1) Create a table:
+Sync + the login gate are implemented above. This is the schema the
+app expects. Run it once in the Supabase SQL editor:
 
    create table workbench_state (
-     id text primary key,          -- one row per user, e.g. the email
+     user_id uuid primary key references auth.users(id) on delete cascade,
      data jsonb not null,
      updated_at timestamptz default now()
    );
    alter table workbench_state enable row level security;
    create policy "own row" on workbench_state
-     for all using (auth.uid()::text = id) with check (auth.uid()::text = id);
+     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-2) Add the client in <head>:
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-3) Replace LocalStore with a SupabaseStore implementing the same
-   load()/save(state) contract (both can be async — render() already
-   works if you await load() before the first render). Use Supabase
-   Auth (magic link or email+password) for the real password gate,
-   and the RLS policy above so each person only sees their own row.
-   The whole app state is one JSON blob, so sync stays simple.
+Notes:
+ - The client loads from the CDN in <head> and is initialised with the
+   publishable key (safe in the browser; RLS enforces per-user access).
+ - Users are created via Supabase Auth (email + password). There is no
+   sign-up screen here — add users from the Supabase dashboard.
+ - SupabaseStore keeps the same load()/save(state) contract as before;
+   localStorage stays populated as an offline cache/fallback.
 ================================================================
 -->
 </body>
