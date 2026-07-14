@@ -1,0 +1,7 @@
+# Local secrets for the Asana sync — NEVER commit these
+tools/.asana-secrets.json
+tools/asana-payload.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Workbench</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23149a97'/%3E%3Ctext x='16' y='23' font-family='Arial,Helvetica,sans-serif' font-size='20' font-weight='bold' fill='%2304211f' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23149a97'/%3E%3Ctext x='16' y='23' font-family='Arial,Helvetica,sans-serif' font-size='20' font-weight='bold' fill='%2304211f' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -140,6 +142,21 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 .bucket-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);
   background:linear-gradient(var(--card),#fbfcfe)}
 .bucket-dot{width:9px;height:9px;border-radius:50%;background:var(--teal-500);flex:none}
+/* color picker dot (buckets + link groups) */
+.color-dot{
+  -webkit-appearance:none;appearance:none;border:none;background:none;padding:0;margin:0;
+  width:15px;height:15px;border-radius:50%;flex:none;cursor:pointer;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(13,35,56,.18);
+}
+.color-dot::-webkit-color-swatch-wrapper{padding:0}
+.color-dot::-webkit-color-swatch{border:none;border-radius:50%}
+.color-dot::-moz-color-swatch{border:none;border-radius:50%}
+/* collapse chevron */
+.collapse-btn{width:26px;height:26px;border-radius:6px;color:var(--ink-faint);display:grid;place-items:center;flex:none}
+.collapse-btn:hover{background:#eef2f7;color:var(--ink)}
+.collapse-btn svg{width:16px;height:16px;transition:transform .15s ease}
+.bucket.collapsed .collapse-btn svg{transform:rotate(-90deg)}
+.bucket.collapsed .bucket-body,.bucket.collapsed .bucket-foot{display:none}
 .bucket-title{font-weight:700;font-size:14px;flex:1;border:none;background:none;padding:2px 4px;border-radius:5px;min-width:0}
 .bucket-title:hover{background:#eef2f7}
 .bucket-title:focus{outline:none;background:#fff;box-shadow:0 0 0 2px var(--teal-500)}
@@ -164,6 +181,8 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 }
 .task:hover{border-color:var(--line-strong);box-shadow:var(--shadow)}
 .task.dragging{opacity:.4;cursor:grabbing}
+.task.drop-before{box-shadow:0 -2px 0 0 var(--teal-500)}
+.task.drop-after{box-shadow:0 2px 0 0 var(--teal-500)}
 .task.done{background:#f7f9fb;border-color:var(--line)}
 .task.done .task-title{text-decoration:line-through;color:var(--ink-faint)}
 .task .pbar{position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:transparent}
@@ -207,6 +226,8 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 .ed-notes{width:100%;min-height:64px;padding:9px;border:1px solid var(--line-strong);border-radius:6px;resize:vertical;line-height:1.5}
 .ed-notes:focus{outline:none;border-color:var(--teal-500)}
 .ed-foot{display:flex;justify-content:space-between;align-items:center}
+.ed-created{font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:5px}
+.ed-created svg{width:12px;height:12px}
 .link-del{color:var(--hi);font-weight:600;font-size:12.5px;padding:5px 8px;border-radius:6px}
 .link-del:hover{background:var(--hi-bg)}
 .prio-pick{display:inline-flex;gap:4px}
@@ -289,7 +310,7 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 .week-nav .navbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;display:grid;place-items:center;color:var(--ink-soft)}
 .week-nav .navbtn:hover{border-color:var(--teal-500);color:var(--teal-600)}
 .week-nav .navbtn svg{width:16px;height:16px}
-.days{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .day{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);min-height:150px;
   display:flex;flex-direction:column;box-shadow:var(--shadow)}
 .day.today{border-color:var(--teal-500)}
@@ -301,6 +322,25 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 .day-body{padding:8px;display:flex;flex-direction:column;gap:6px;flex:1}
 .day .task{padding:7px 8px;font-size:12.5px}
 .day .task .task-title{font-size:12.5px}
+
+/* planner subtask row */
+.subitem{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--r-sm);
+  background:#fbfcfe;border:1px dashed var(--line-strong);cursor:grab;font-size:12px;transition:.12s}
+.subitem:hover{border-color:var(--teal-500)}
+.subitem.dragging{opacity:.4;cursor:grabbing}
+.subitem .corner{display:flex;flex:none;color:var(--ink-faint)}
+.subitem .corner svg{width:13px;height:13px}
+.subitem .sub-check{margin:0}
+.subitem .st-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.subitem .st-title.done{text-decoration:line-through;color:var(--ink-faint)}
+.subitem .st-parent{font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--teal-600);background:var(--teal-100);padding:2px 6px;border-radius:10px;flex:none;
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plan-list-body .subitem{margin-left:14px}
+.plan-parent-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin:8px 2px 0;
+  display:flex;align-items:center;gap:6px;overflow:hidden}
+.plan-parent-label span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plan-parent-label .dotp{width:7px;height:7px;border-radius:50%;background:var(--line-strong);flex:none}
 
 /* ---------- links / home ---------- */
 .link-row{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--r-sm);
@@ -322,9 +362,39 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
 .link-editor{margin-top:8px;padding:12px;background:#fbfcfe;border:1px solid var(--line);border-radius:var(--r-sm);
   display:flex;flex-direction:column;gap:10px}
 .link-editor .ed-field input{width:100%}
+.link-row.dragging{opacity:.4}
+.link-row.drop-before{box-shadow:0 -2px 0 0 var(--teal-500)}
+.link-row.drop-after{box-shadow:0 2px 0 0 var(--teal-500)}
+.grip{width:20px;height:22px;display:grid;place-items:center;color:var(--ink-faint);cursor:grab;flex:none}
+.grip:hover{color:var(--ink)}
+.grip svg{width:15px;height:15px}
+.bucket.dragging{opacity:.5}
+/* stacked link-group tabs */
+.link-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.link-gtab{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);
+  color:var(--ink-soft);font-weight:600;font-size:13px;cursor:pointer}
+.link-gtab:hover{border-color:var(--line-strong)}
+.link-gtab.on{background:var(--navy-800);color:#fff;border-color:var(--navy-800)}
+.link-gtab.dragging{opacity:.4}
+.link-gtab .gdot{width:9px;height:9px;border-radius:50%;background:var(--teal-500);flex:none}
+.link-gtab .gtab-count{font-size:11px;font-weight:700;background:rgba(13,35,56,.08);padding:1px 7px;border-radius:20px}
+.link-gtab.on .gtab-count{background:rgba(255,255,255,.18)}
+.link-gtab.add{color:var(--ink-soft);box-shadow:none;border-style:dashed}
+.link-gtab.add svg{width:16px;height:16px}
+.link-single{max-width:560px}
+.link-single .bucket{width:100%}
 
 /* empty states */
 .empty-buckets{grid-column:1/-1;text-align:center;color:var(--ink-faint);padding:6px 0 2px;font-size:13px}
+/* asana view */
+.asana-synced{font-size:12px;color:var(--ink-faint);font-weight:600}
+.asana-empty{text-align:center;color:var(--ink-soft);padding:44px 20px}
+.asana-empty p{margin:2px 0}
+.asana-empty .muted{color:var(--ink-faint);font-size:13px}
+.task.asana-task{cursor:default;align-items:center}
+.task.asana-task .btn{flex:none;padding:6px 11px}
+.task.asana-task .btn svg{width:14px;height:14px}
 
 /* toast */
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -399,6 +469,7 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:var(--ink)}
       <button data-view="tasks" class="on">Tasks</button>
       <button data-view="planner">Planner</button>
       <button data-view="links">Home</button>
+      <button data-view="asana">Asana</button>
     </div>
     <div class="spacer"></div>
     <label class="search">
@@ -475,6 +546,9 @@ const ICON = {
   link:svg('<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>'),
   clock:svg('<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>'),
   sub:svg('<circle cx="4.5" cy="6" r="1.4"/><circle cx="4.5" cy="12" r="1.4"/><circle cx="4.5" cy="18" r="1.4"/><path d="M9 6h11M9 12h11M9 18h11"/>'),
+  chevD:svg('<path d="m6 9 6 6 6-6"/>'),
+  corner:svg('<path d="M4 5v7a3 3 0 0 0 3 3h13"/><path d="m16 11 4 4-4 4"/>'),
+  refresh:svg('<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>'),
 };
 
 /* ---------- date helpers (ISO yyyy-mm-dd, week starts Monday) ---------- */
@@ -501,6 +575,10 @@ const dueState = s => {
   if (diff < 0) return 'over';
   if (diff <= 2) return 'soon';
   return '';
+};
+const fmtCreated = ms => {
+  if (!ms) return '';
+  return new Date(ms).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
 };
 
 /* ============================================================
@@ -585,12 +663,18 @@ let S; // populated by startApp() after auth + async load
 
 // migrate / guard fields (run once state is loaded)
 function normalizeState(){
-  S.ui = Object.assign({ view:'tasks', sort:'open', notesOpen:true, activeNoteId:null, weekStart: iso(mondayOf(new Date())) }, S.ui || {});
+  S.ui = Object.assign({ view:'tasks', sort:'open', notesOpen:true, activeNoteId:null, weekStart: iso(mondayOf(new Date())), linksLayout:'grid', activeLinkGroupId:null }, S.ui || {});
   S.buckets ||= []; S.tasks ||= []; S.notes ||= [];
   if (!S.links) S.links = starterLinks();
   if (!S.clients) S.clients = ['Revel One','KH','Arcus','Avocet','Prosperity','Ibexis'];
-  S.tasks.forEach(t => { t.scheduledDate ??= ''; t.notes ??= ''; t.priority ??= null; t.client ??= ''; t.future ??= false; t.subtasks ??= []; });
+  S.tasks.forEach(t => {
+    t.scheduledDate ??= ''; t.notes ??= ''; t.priority ??= null; t.client ??= ''; t.future ??= false; t.subtasks ??= [];
+    t.subtasks.forEach(st => { st.scheduledDate ??= ''; });
+  });
+  S.buckets.forEach(b => { b.color ??= null; });
+  S.links.forEach(g => { g.color ??= null; g.collapsed ??= false; });
   if (!S.ui.activeNoteId && S.notes[0]) S.ui.activeNoteId = S.notes[0].id;
+  if (!S.ui.activeLinkGroupId && S.links[0]) S.ui.activeLinkGroupId = S.links[0].id;
 }
 
 let searchQ = '';
@@ -618,6 +702,7 @@ const toast = (() => {
 function renderMain(){
   if (S.ui.view === 'tasks') renderTasks();
   else if (S.ui.view === 'planner') renderPlanner();
+  else if (S.ui.view === 'asana') renderAsana();
   else renderLinks();
 }
 function render(){
@@ -631,7 +716,8 @@ function render(){
 const matches = t => {
   if (!searchQ) return true;
   const q = searchQ.toLowerCase();
-  return (t.title||'').toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q) || (t.client||'').toLowerCase().includes(q);
+  return (t.title||'').toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q) || (t.client||'').toLowerCase().includes(q)
+    || (t.subtasks||[]).some(st => (st.title||'').toLowerCase().includes(q));
 };
 const passSort = t => {
   switch (S.ui.sort){
@@ -651,6 +737,10 @@ const sortTasks = arr => arr.slice().sort((a,b) => {
   if (a.dueDate) return -1; if (b.dueDate) return 1;
   return a.createdAt - b.createdAt;
 });
+/* Manual order: preserve the S.tasks array order (which drag-to-reorder
+   rewrites), only sinking completed tasks to the bottom. Array.sort is
+   stable, so non-done tasks keep their arranged order. */
+const orderTasks = arr => arr.slice().sort((a,b) => (a.done === b.done) ? 0 : (a.done ? 1 : -1));
 
 /* ============================================================
    TASKS VIEW
@@ -669,7 +759,7 @@ function renderTasks(){
   main.append(head);
 
   // ---- inbox / general ----
-  const inboxTasks = sortTasks(S.tasks.filter(t => !t.bucketId && visible(t)));
+  const inboxTasks = orderTasks(S.tasks.filter(t => !t.bucketId && visible(t)));
   const inbox = el('div',{class:'inbox', dataset:{bucket:'inbox'}});
   makeDrop(inbox, 'inbox');
   inbox.append(el('div',{class:'section-head',style:'margin-bottom:10px'},[
@@ -720,17 +810,29 @@ function quickAdd(placeholder, bucketId){
   return wrap;
 }
 
+/* ---------- shared: color dot + accent ---------- */
+function applyAccent(card, color){ card.style.borderTop = color ? `3px solid ${color}` : ''; }
+function colorDot(obj, card){
+  const dot = el('input',{type:'color', class:'color-dot', value: obj.color || '#149a97', title:'Pick a color', 'aria-label':'Group color'});
+  dot.addEventListener('input', () => { obj.color = dot.value; applyAccent(card, dot.value); });
+  dot.addEventListener('change', () => { obj.color = dot.value; save(); });
+  return dot;
+}
+
 /* ---------- bucket ---------- */
 function bucketCard(b){
-  const bucketTasks = sortTasks(S.tasks.filter(t => t.bucketId === b.id && visible(t)));
+  const bucketTasks = orderTasks(S.tasks.filter(t => t.bucketId === b.id && visible(t)));
   const total = S.tasks.filter(t => t.bucketId === b.id).length;
+
+  const card = el('div',{class:'bucket', dataset:{id:b.id}});
+  applyAccent(card, b.color);
 
   const title = el('input',{class:'bucket-title', value:b.name, 'aria-label':'Bucket name'});
   title.addEventListener('change', () => { b.name = title.value.trim() || 'Untitled'; title.value=b.name; save(); });
   title.addEventListener('keydown', e => { if (e.key==='Enter') title.blur(); });
 
   const head = el('div',{class:'bucket-head'},[
-    el('span',{class:'bucket-dot'}), title,
+    colorDot(b, card), title,
     el('span',{class:'bucket-count',text:String(total)}),
     el('button',{class:'bucket-del', title:'Delete bucket', html:ICON.trash, onclick:()=>deleteBucket(b)}),
   ]);
@@ -738,7 +840,7 @@ function bucketCard(b){
   bucketTasks.forEach(t => body.append(taskCard(t)));
   const foot = el('div',{class:'bucket-foot'},[ quickAdd('Add to '+b.name, b.id) ]);
 
-  const card = el('div',{class:'bucket', dataset:{id:b.id}},[head, body, foot]);
+  card.append(head, body, foot);
   makeDrop(card, b.id);
   return card;
 }
@@ -768,6 +870,23 @@ function taskCard(t, compact=false){
   // drag
   card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+  // drop onto another card to reorder within a container (Tasks view only)
+  if (!compact){
+    const half = e => (e.clientY - card.getBoundingClientRect().top) > card.offsetHeight/2; // true = drop below
+    card.addEventListener('dragover', e => {
+      e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect='move';
+      const after = half(e);
+      card.classList.toggle('drop-after', after);
+      card.classList.toggle('drop-before', !after);
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drop-before','drop-after'));
+    card.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation();
+      card.classList.remove('drop-before','drop-after');
+      reorderTask(e.dataTransfer.getData('text/plain'), t, half(e));
+    });
+  }
 
   // checkbox
   const check = el('button',{class:`check ${t.done?'on':''}`, 'aria-label':'Toggle complete', html:ICON.check, onclick:e=>{
@@ -876,6 +995,7 @@ function taskEditor(t){
     statusRow,
     subBlock,
     field('Notes', notes),
+    t.createdAt ? el('div',{class:'ed-created', html: ICON.clock + `<span>Created ${fmtCreated(t.createdAt)}</span>`}) : null,
     foot,
   ]);
 }
@@ -901,7 +1021,7 @@ function subtaskBlock(t){
   const addIn = el('input',{type:'text', placeholder:'Add a subtask — press Enter', 'aria-label':'Add subtask'});
   addIn.addEventListener('keydown', e => {
     if (e.key==='Enter' && addIn.value.trim()){
-      t.subtasks.push({ id:uid(), title:addIn.value.trim(), done:false });
+      t.subtasks.push({ id:uid(), title:addIn.value.trim(), done:false, scheduledDate:'' });
       addIn.value=''; save(); render();
       requestAnimationFrame(()=>{ const a=$(`.editor .sub-add input`); a && a.focus(); });
     }
@@ -910,6 +1030,21 @@ function subtaskBlock(t){
   return el('div',{class:'subtasks'},[ head, list, add ]);
 }
 function field(label, control){ return el('div',{class:'ed-field',style: control.tagName==='TEXTAREA'?'width:100%':''},[ el('label',{text:label}), control ]); }
+
+/* ---------- reorder within a container ---------- */
+function reorderTask(draggedId, target, placeAfter){
+  if (!draggedId || draggedId === target.id) return;
+  const dragged = S.tasks.find(x => x.id === draggedId);
+  if (!dragged) return;
+  const changedBucket = dragged.bucketId !== target.bucketId;
+  dragged.bucketId = target.bucketId;               // adopt the target's container
+  S.tasks = S.tasks.filter(x => x.id !== draggedId); // pull it out
+  let idx = S.tasks.findIndex(x => x.id === target.id);
+  if (idx < 0) idx = S.tasks.length; else if (placeAfter) idx += 1;
+  S.tasks.splice(idx, 0, dragged);                   // reinsert at the drop position
+  save(); render();
+  if (changedBucket) toast(target.bucketId ? 'Filed to bucket' : 'Moved to General');
+}
 
 /* ---------- drop target wiring (buckets + inbox) ---------- */
 function makeDrop(node, bucketId){
@@ -920,7 +1055,13 @@ function makeDrop(node, bucketId){
     const id = e.dataTransfer.getData('text/plain'); const t = S.tasks.find(x=>x.id===id);
     if (!t) return;
     const target = bucketId === 'inbox' ? null : bucketId;
-    if (t.bucketId !== target){ t.bucketId = target; save(); render(); toast(target ? 'Filed to bucket' : 'Moved to General'); }
+    const changed = t.bucketId !== target;
+    t.bucketId = target;
+    // dropping on empty container space sends the task to the bottom
+    S.tasks = S.tasks.filter(x => x.id !== id);
+    S.tasks.push(t);
+    save(); render();
+    if (changed) toast(target ? 'Filed to bucket' : 'Moved to General');
   });
 }
 
@@ -929,19 +1070,32 @@ function makeDrop(node, bucketId){
    ============================================================ */
 function renderPlanner(){
   const main = $('#main'); main.innerHTML='';
-  main.append(el('div',{class:'section-head'},[ el('h2',{text:'Planner'}), el('span',{class:'count',text:'Drag tasks onto a day. Drop back on the list to unschedule.'}) ]));
+  main.append(el('div',{class:'section-head'},[ el('h2',{text:'Planner'}), el('span',{class:'count',text:'Drag tasks or subtasks onto a day. Drop back on the list to unschedule.'}) ]));
 
   const wrap = el('div',{class:'plan-wrap'});
 
-  // ---- left: unscheduled open tasks, by due date ----
+  // ---- left: things still needing a day (tasks + their loose subtasks) ----
   const list = el('div',{class:'plan-list'});
   list.append(el('div',{class:'plan-list-head'},[ el('span',{text:'To schedule'}),
     el('span',{class:'bucket-count', id:'planCount'}) ]));
   const listBody = el('div',{class:'plan-list-body', dataset:{date:'none'}});
-  const unscheduled = sortTasks(S.tasks.filter(t => !t.scheduledDate && matches(t) && !t.done && !t.future));
-  list.querySelector('#planCount').textContent = String(unscheduled.length);
-  if (!unscheduled.length) listBody.append(el('div',{class:'plan-empty',text:'Nothing waiting. Everything with a home shows on the week →'}));
-  unscheduled.forEach(t => listBody.append(taskCard(t, true)));
+  const openTasks = sortTasks(S.tasks.filter(t => !t.done && !t.future && matches(t)));
+  let pending = 0;
+  const entries = [];
+  openTasks.forEach(t => {
+    const looseSubs = (t.subtasks||[]).filter(st => !st.scheduledDate && !st.done);
+    const taskUnsched = !t.scheduledDate;
+    if (!taskUnsched && !looseSubs.length) return; // fully placed
+    entries.push({ t, taskUnsched, looseSubs });
+    pending += (taskUnsched ? 1 : 0) + looseSubs.length;
+  });
+  list.querySelector('#planCount').textContent = String(pending);
+  if (!entries.length) listBody.append(el('div',{class:'plan-empty',text:'Nothing waiting. Scheduled items show on the week →'}));
+  entries.forEach(({t, taskUnsched, looseSubs}) => {
+    if (taskUnsched) listBody.append(taskCard(t, true));
+    else listBody.append(el('div',{class:'plan-parent-label'},[ el('span',{class:'dotp'}), el('span',{text:t.title, title:t.title}) ]));
+    looseSubs.forEach(st => listBody.append(plannerSubItem(t, st)));
+  });
   makeDayDrop(listBody, 'none');
   list.append(listBody);
   wrap.append(list);
@@ -949,7 +1103,7 @@ function renderPlanner(){
   // ---- right: week ----
   const weekStart = parseISO(S.ui.weekStart);
   const week = el('div',{class:'week'});
-  const end = addDays(weekStart,6);
+  const end = addDays(weekStart,4); // Mon–Fri
   const rangeTxt = `${weekStart.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${end.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
   week.append(el('div',{class:'week-nav'},[
     el('button',{class:'navbtn', title:'Previous week', html:ICON.chevL, onclick:()=>shiftWeek(-7)}),
@@ -959,8 +1113,8 @@ function renderPlanner(){
   ]));
 
   const days = el('div',{class:'days'});
-  const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  for (let i=0;i<7;i++){
+  const DOW = ['Mon','Tue','Wed','Thu','Fri'];
+  for (let i=0;i<5;i++){
     const d = addDays(weekStart,i); const dISO = iso(d);
     const isToday = dISO === todayISO();
     const dayEl = el('div',{class:`day ${isToday?'today':''}`, dataset:{date:dISO}});
@@ -968,6 +1122,10 @@ function renderPlanner(){
     const dbody = el('div',{class:'day-body'});
     const dayTasks = sortTasks(S.tasks.filter(t => t.scheduledDate===dISO && matches(t)));
     dayTasks.forEach(t => dbody.append(taskCard(t, true)));
+    // individually-scheduled subtasks (independent of their parent)
+    S.tasks.forEach(t => (t.subtasks||[]).forEach(st => {
+      if (st.scheduledDate===dISO && matches(t)) dbody.append(plannerSubItem(t, st));
+    }));
     dayEl.append(dbody);
     makeDayDrop(dayEl, dISO);
     days.append(dayEl);
@@ -977,13 +1135,37 @@ function renderPlanner(){
   main.append(wrap);
 }
 function shiftWeek(n){ S.ui.weekStart = iso(addDays(parseISO(S.ui.weekStart), n)); save(); render(); }
+
+/* compact draggable row for an individually-scheduled subtask (planner only) */
+function plannerSubItem(parent, st){
+  const item = el('div',{class:`subitem ${st.done?'done':''}`, draggable:'true'});
+  item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'sub:'+parent.id+':'+st.id); e.dataTransfer.effectAllowed='move'; item.classList.add('dragging'); e.stopPropagation(); });
+  item.addEventListener('dragend', () => item.classList.remove('dragging'));
+  item.append(el('span',{class:'corner', html:ICON.corner}));
+  item.append(el('button',{class:`sub-check ${st.done?'on':''}`, 'aria-label':'Toggle subtask', html:ICON.check,
+    onclick:e=>{ e.stopPropagation(); st.done=!st.done; save(); render(); }}));
+  item.append(el('span',{class:`st-title ${st.done?'done':''}`, text:st.title, title:st.title}));
+  item.append(el('span',{class:'st-parent', text:parent.title, title:'From: '+parent.title}));
+  return item;
+}
+
 function makeDayDrop(node, dateISO){
   node.addEventListener('dragover', e => { e.preventDefault(); node.classList.add('drop-hot'); e.dataTransfer.dropEffect='move'; });
   node.addEventListener('dragleave', e => { if (!node.contains(e.relatedTarget)) node.classList.remove('drop-hot'); });
   node.addEventListener('drop', e => {
     e.preventDefault(); node.classList.remove('drop-hot');
-    const id = e.dataTransfer.getData('text/plain'); const t = S.tasks.find(x=>x.id===id); if(!t) return;
-    t.scheduledDate = dateISO === 'none' ? '' : dateISO;
+    const raw = e.dataTransfer.getData('text/plain');
+    const val = dateISO === 'none' ? '' : dateISO;
+    if (raw.startsWith('sub:')){
+      const [,pid,sid] = raw.split(':');
+      const p = S.tasks.find(x => x.id === pid);
+      const st = p && (p.subtasks||[]).find(s => s.id === sid);
+      if (!st) return;
+      st.scheduledDate = val;
+    } else {
+      const t = S.tasks.find(x => x.id === raw); if (!t) return;
+      t.scheduledDate = val;
+    }
     save(); render(); toast(dateISO==='none' ? 'Unscheduled' : 'Scheduled');
   });
 }
@@ -1008,35 +1190,85 @@ function renderLinks(){
   main.append(el('div',{class:'section-head'},[
     el('h2',{text:'Home'}),
     el('span',{class:'count',text:`${totalLinks} link${totalLinks===1?'':'s'} · ${S.links.length} group${S.links.length===1?'':'s'}`}),
+    el('div',{style:'flex:1'}),
+    seg('linksLayout', [['grid','Grid'],['tabs','Tabs']], S.ui.linksLayout, v => { S.ui.linksLayout=v; save(); renderLinks(); }),
   ]));
+
+  // searching always uses the grid so matches across every group are visible
+  const layout = q ? 'grid' : S.ui.linksLayout;
+
+  if (layout === 'tabs'){ renderLinkTabs(); return; }
 
   const grid = el('div',{class:'buckets'});
   if (!S.links.length) grid.append(el('div',{class:'empty-buckets',text:'No groups yet — add one to start collecting links.'}));
   S.links.forEach(g => {
     const items = g.items.filter(it => !q || (it.label||'').toLowerCase().includes(q) || (it.url||'').toLowerCase().includes(q));
-    // if searching and nothing in this group matches, skip the group
-    if (q && !items.length) return;
-    grid.append(linkGroupCard(g, items));
+    if (q && !items.length) return; // skip groups with no match while searching
+    grid.append(linkGroupCard(g, items, !!q, false));
   });
   if (!q) grid.append(addGroupBtn());
   main.append(grid);
 }
 
-function linkGroupCard(g, items){
+/* stacked, one-group-at-a-time view */
+function renderLinkTabs(){
+  const main = $('#main');
+  if (S.ui.activeLinkGroupId && !S.links.find(g=>g.id===S.ui.activeLinkGroupId)) S.ui.activeLinkGroupId = S.links[0]?.id || null;
+
+  const bar = el('div',{class:'link-tabs'});
+  S.links.forEach(g => {
+    const on = g.id === S.ui.activeLinkGroupId;
+    const tab = el('button',{class:`link-gtab ${on?'on':''}`, draggable:'true', dataset:{id:g.id},
+      onclick:()=>{ S.ui.activeLinkGroupId=g.id; save(); renderLinks(); }},[
+      el('span',{class:'gdot', style: g.color?`background:${g.color}`:''}),
+      el('span',{text:g.name}),
+      el('span',{class:'gtab-count',text:String(g.items.length)}),
+    ]);
+    tab.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain','grp:'+g.id); e.dataTransfer.effectAllowed='move'; tab.classList.add('dragging'); });
+    tab.addEventListener('dragend', ()=> tab.classList.remove('dragging'));
+    wireGroupReorder(tab, g, true);
+    bar.append(tab);
+  });
+  bar.append(el('button',{class:'link-gtab add', title:'New group', html:ICON.plus, onclick:addGroup}));
+  main.append(bar);
+
+  const g = S.links.find(x=>x.id===S.ui.activeLinkGroupId);
+  if (!g){ main.append(el('div',{class:'empty-buckets',text:'No groups yet — add one with +.'})); return; }
+  const single = el('div',{class:'link-single'});
+  single.append(linkGroupCard(g, g.items, false, true));
+  main.append(single);
+}
+
+function linkGroupCard(g, items, forceOpen, single){
+  const card = el('div',{class:'bucket', dataset:{id:g.id}});
+  applyAccent(card, g.color);
+  const collapsed = !single && g.collapsed && !forceOpen;
+  if (collapsed) card.classList.add('collapsed');
+
   const title = el('input',{class:'bucket-title', value:g.name, 'aria-label':'Group name'});
-  title.addEventListener('change',()=>{ g.name=title.value.trim()||'Untitled'; title.value=g.name; save(); });
+  title.addEventListener('change',()=>{ g.name=title.value.trim()||'Untitled'; title.value=g.name; save(); renderLinks(); });
   title.addEventListener('keydown',e=>{ if(e.key==='Enter') title.blur(); });
 
-  const head = el('div',{class:'bucket-head'},[
-    el('span',{class:'bucket-dot'}), title,
-    el('span',{class:'bucket-count',text:String(g.items.length)}),
-    el('button',{class:'bucket-del', title:'Delete group', html:ICON.trash, onclick:()=>deleteGroup(g)}),
-  ]);
+  const headKids = [];
+  if (!single){
+    const grip = el('span',{class:'grip', title:'Drag to reorder group', html:ICON.drag, draggable:'true'});
+    grip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain','grp:'+g.id); e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
+    grip.addEventListener('dragend', ()=> card.classList.remove('dragging'));
+    headKids.push(grip);
+  }
+  headKids.push(colorDot(g, card), title, el('span',{class:'bucket-count',text:String(g.items.length)}));
+  if (!single) headKids.push(el('button',{class:'collapse-btn', title: g.collapsed?'Expand':'Collapse', html:ICON.chevD, onclick:()=>{ g.collapsed=!g.collapsed; save(); renderLinks(); }}));
+  headKids.push(el('button',{class:'bucket-del', title:'Delete group', html:ICON.trash, onclick:()=>deleteGroup(g)}));
+  const head = el('div',{class:'bucket-head'}, headKids);
+
   const body = el('div',{class:'bucket-body'});
   if (!items.length) body.append(el('div',{class:'link-empty',text:'No links yet.'}));
   items.forEach(it => body.append(linkRow(g, it)));
   const foot = el('div',{class:'bucket-foot'},[ addLinkQuick(g) ]);
-  return el('div',{class:'bucket', dataset:{id:g.id}},[head, body, foot]);
+
+  card.append(head, body, foot);
+  makeGroupCardDrop(card, g);
+  return card;
 }
 
 function linkRow(g, it){
@@ -1053,12 +1285,29 @@ function linkRow(g, it){
     el('button',{title:'Edit link', html:ICON.edit, onclick:e=>{ e.preventDefault(); e.stopPropagation(); openLinkEditor = openLinkEditor===it.id?null:it.id; renderLinks(); }}),
     el('button',{class:'del', title:'Delete link', html:ICON.trash, onclick:e=>{ e.preventDefault(); e.stopPropagation(); g.items=g.items.filter(x=>x.id!==it.id); if(openLinkEditor===it.id)openLinkEditor=null; save(); renderLinks(); toast('Link removed'); }}),
   ]);
-  const row = el('a',{class:'link-row', href:normalizeUrl(it.url)||'#', target:'_blank', rel:'noopener noreferrer'},[
+  const row = el('a',{class:'link-row', href:normalizeUrl(it.url)||'#', target:'_blank', rel:'noopener noreferrer', draggable:'true'},[
     thumb,
     el('span',{class:'link-text'},[ el('div',{class:'link-label',text:it.label||host||'Untitled'}), host?el('div',{class:'link-host',text:host}):null ]),
     actions,
   ]);
   if (!it.url) row.addEventListener('click',e=>{ e.preventDefault(); openLinkEditor=it.id; renderLinks(); });
+
+  // drag to reorder (within a group or across groups)
+  row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain','lnk:'+g.id+':'+it.id); e.dataTransfer.effectAllowed='move'; row.classList.add('dragging'); });
+  row.addEventListener('dragend', ()=> row.classList.remove('drop-before','drop-after','dragging'));
+  const half = e => (e.clientY - row.getBoundingClientRect().top) > row.offsetHeight/2;
+  row.addEventListener('dragover', e => {
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    const a = half(e); row.classList.toggle('drop-after',a); row.classList.toggle('drop-before',!a);
+  });
+  row.addEventListener('dragleave', ()=> row.classList.remove('drop-before','drop-after'));
+  row.addEventListener('drop', e => {
+    row.classList.remove('drop-before','drop-after');
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw.startsWith('lnk:')) return; // group reorder bubbles up to the card
+    e.preventDefault(); e.stopPropagation();
+    reorderLink(raw, g, it, half(e));
+  });
 
   if (openLinkEditor === it.id){
     return el('div',{class:'task-wrap'},[row, linkEditor(g, it)]);
@@ -1071,6 +1320,11 @@ function linkEditor(g, it){
   label.addEventListener('change',()=>{ it.label=label.value.trim(); save(); });
   const url = el('input',{type:'text', value:it.url||'', placeholder:'https://…'});
   url.addEventListener('change',()=>{ it.url=normalizeUrl(url.value); url.value=it.url; save(); renderLinks(); });
+  // Ctrl/Cmd+Enter saves and closes the editor
+  const commit = () => { it.label=label.value.trim(); it.url=normalizeUrl(url.value); openLinkEditor=null; save(); renderLinks(); };
+  const onKey = e => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); commit(); } };
+  label.addEventListener('keydown', onKey);
+  url.addEventListener('keydown', onKey);
   const foot = el('div',{class:'ed-foot'},[
     el('button',{class:'link-del', text:'Delete link', onclick:()=>{ g.items=g.items.filter(x=>x.id!==it.id); openLinkEditor=null; save(); renderLinks(); toast('Link removed'); }}),
     el('button',{class:'btn ghost', text:'Done', onclick:()=>{ openLinkEditor=null; renderLinks(); }}),
@@ -1100,12 +1354,166 @@ function deleteGroup(g){
   if (n && !confirm(`Delete group "${g.name}" and its ${n} link${n>1?'s':''}?`)) return;
   S.links = S.links.filter(x=>x.id!==g.id); save(); renderLinks(); toast('Group deleted');
 }
+function addGroup(){
+  const g = { id:uid(), name:'New group', items:[], color:null, collapsed:false };
+  S.links.push(g); S.ui.activeLinkGroupId = g.id; save(); renderLinks();
+  requestAnimationFrame(()=>{ const inp=$(`.bucket[data-id="${g.id}"] .bucket-title`); if(inp){inp.focus();inp.select();} });
+}
 function addGroupBtn(){
-  return el('button',{class:'add-bucket', onclick:()=>{
-    const g = { id:uid(), name:'New group', items:[] };
-    S.links.push(g); save(); renderLinks();
-    requestAnimationFrame(()=>{ const inp=$(`.bucket[data-id="${g.id}"] .bucket-title`); if(inp){inp.focus();inp.select();} });
-  }},[ el('span',{class:'inner'},[ el('span',{html:ICON.plus}), el('span',{text:'New group'}) ]) ]);
+  return el('button',{class:'add-bucket', onclick:addGroup},
+    [ el('span',{class:'inner'},[ el('span',{html:ICON.plus}), el('span',{text:'New group'}) ]) ]);
+}
+
+/* ---------- link + group reordering ---------- */
+function reorderGroup(draggedId, targetId, placeAfter){
+  if (!draggedId || draggedId === targetId) return;
+  const gi = S.links.findIndex(x => x.id === draggedId);
+  if (gi < 0) return;
+  const [g] = S.links.splice(gi, 1);
+  let idx = S.links.findIndex(x => x.id === targetId);
+  if (idx < 0) idx = S.links.length; else if (placeAfter) idx += 1;
+  S.links.splice(idx, 0, g);
+  save(); renderLinks();
+}
+function reorderLink(payload, targetGroup, targetItem, placeAfter){
+  const [, sgid, iid] = payload.split(':');
+  const sg = S.links.find(x => x.id === sgid); if (!sg) return;
+  const i0 = sg.items.findIndex(x => x.id === iid); if (i0 < 0) return;
+  const [it] = sg.items.splice(i0, 1);
+  if (!targetItem){ targetGroup.items.push(it); }
+  else {
+    let idx = targetGroup.items.findIndex(x => x.id === targetItem.id);
+    if (idx < 0) idx = targetGroup.items.length; else if (placeAfter) idx += 1;
+    targetGroup.items.splice(idx, 0, it);
+  }
+  save(); renderLinks();
+}
+function wireGroupReorder(node, g, horizontal){
+  node.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+  node.addEventListener('drop', e => {
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw.startsWith('grp:')) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = node.getBoundingClientRect();
+    const after = horizontal ? (e.clientX - r.left) > r.width/2 : (e.clientY - r.top) > r.height/2;
+    reorderGroup(raw.slice(4), g.id, after);
+  });
+}
+function makeGroupCardDrop(card, g){
+  card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+  card.addEventListener('drop', e => {
+    const raw = e.dataTransfer.getData('text/plain');
+    if (raw.startsWith('grp:')){
+      e.preventDefault();
+      const r = card.getBoundingClientRect();
+      reorderGroup(raw.slice(4), g.id, (e.clientX - r.left) > r.width/2);
+    } else if (raw.startsWith('lnk:')){
+      e.preventDefault();
+      reorderLink(raw, g, null, true); // dropped on empty space → append to this group
+    }
+  });
+}
+
+/* ============================================================
+   ASANA VIEW — read-only mirror of your assigned tasks.
+   Synced into Supabase (asana_tasks) by a local script; the app
+   only reads it. "Add to workbench" copies a task + its subtasks
+   into General as a native task (deduped by asanaGid).
+   ============================================================ */
+let asanaData = null; // {tasks:[], syncedAt} once loaded; null until first fetch
+
+async function loadAsana(){
+  if (!Store.userId){ asanaData = { tasks:[], syncedAt:null }; if (S.ui.view==='asana') renderAsana(); return; }
+  try {
+    const { data, error } = await sb.from('asana_tasks').select('data,synced_at').eq('user_id', Store.userId).maybeSingle();
+    if (error) throw error;
+    asanaData = { tasks: (data && data.data && data.data.tasks) || [], syncedAt: (data && data.synced_at) || null };
+  } catch(e){
+    console.warn('Asana load failed', e);
+    asanaData = { tasks:[], syncedAt:null, error: e.message || 'load failed' };
+  }
+  if (S.ui.view === 'asana') renderAsana();
+}
+
+function fmtSynced(ts){
+  if (!ts) return 'never';
+  try { return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+  catch { return ts; }
+}
+
+function importAsanaTask(at){
+  if (S.tasks.some(t => t.asanaGid === at.gid)) return; // already imported
+  S.tasks.push({
+    id:uid(), title:at.name||'Untitled', bucketId:null, priority:null, done:false,
+    dueDate:at.due_on||'', notes:at.notes||'', scheduledDate:'', client:'', future:false,
+    subtasks:(at.subtasks||[]).map(s => ({ id:uid(), title:s.name||'Subtask', done:!!s.completed, scheduledDate:'' })),
+    createdAt:Date.now(), asanaGid:at.gid,
+  });
+  save(); renderAsana(); toast('Added to workbench');
+}
+
+function renderAsana(){
+  const main = $('#main'); main.innerHTML='';
+  const count = asanaData ? asanaData.tasks.length : 0;
+
+  main.append(el('div',{class:'section-head'},[
+    el('h2',{text:'Asana'}),
+    el('span',{class:'count', text: asanaData ? `${count} task${count===1?'':'s'} assigned to you` : 'Loading…'}),
+    el('div',{style:'flex:1'}),
+    asanaData ? el('span',{class:'asana-synced', text:`Synced ${fmtSynced(asanaData.syncedAt)}`}) : null,
+    el('button',{class:'btn ghost', title:'Reload from Supabase', html:ICON.refresh+'<span>Reload</span>', onclick:()=>{ asanaData=null; renderAsana(); }}),
+  ]));
+
+  if (asanaData === null){ main.append(el('div',{class:'plan-empty',text:'Loading your Asana tasks…'})); loadAsana(); return; }
+  if (asanaData.error) main.append(el('div',{class:'empty-buckets',text:'Could not load Asana data — '+asanaData.error+' (the asana_tasks table may not exist yet).'}));
+  if (!asanaData.tasks.length){
+    main.append(el('div',{class:'asana-empty'},[
+      el('p',{text:'No Asana tasks synced yet.'}),
+      el('p',{class:'muted',text:'Ask me to “refresh Asana” and I’ll pull your incomplete assigned tasks in.'}),
+    ]));
+    return;
+  }
+
+  const q = searchQ.toLowerCase();
+  const groups = {};
+  asanaData.tasks.forEach(at => {
+    if (q && !(at.name||'').toLowerCase().includes(q) && !(at.notes||'').toLowerCase().includes(q)) return;
+    const pname = (at.projects && at.projects[0] && (at.projects[0].name || at.projects[0])) || 'No project';
+    (groups[pname] ||= []).push(at);
+  });
+
+  const grid = el('div',{class:'buckets'});
+  Object.keys(groups).sort().forEach(pname => grid.append(asanaGroupCard(pname, groups[pname])));
+  main.append(grid);
+}
+
+function asanaGroupCard(pname, tasks){
+  const head = el('div',{class:'bucket-head'},[
+    el('span',{class:'bucket-dot', style:'background:#f06a6a'}),
+    el('span',{class:'bucket-title', style:'padding-left:2px', text:pname}),
+    el('span',{class:'bucket-count', text:String(tasks.length)}),
+  ]);
+  const body = el('div',{class:'bucket-body'});
+  tasks.forEach(at => body.append(asanaCard(at)));
+  return el('div',{class:'bucket'},[head, body]);
+}
+
+function asanaCard(at){
+  const imported = S.tasks.some(t => t.asanaGid === at.gid);
+  const meta = el('div',{class:'task-meta'});
+  if (at.due_on) meta.append(el('span',{class:`chip due ${dueState(at.due_on)}`, html:ICON.cal+`<span>${fmtDue(at.due_on)}</span>`}));
+  const subs = at.subtasks || [];
+  if (subs.length){ const done = subs.filter(s=>s.completed).length; meta.append(el('span',{class:'chip sub', html:ICON.sub+`<span>${done}/${subs.length}</span>`})); }
+  if (at.notes) meta.append(el('span',{class:'chip note', html:ICON.note+'<span>note</span>'}));
+
+  const col = el('div',{class:'task-main'},[ el('div',{class:'task-title', style:'cursor:default', text:at.name||'Untitled'}) ]);
+  if (meta.children.length) col.append(meta);
+
+  const btn = imported
+    ? el('button',{class:'btn ghost', disabled:'', html:ICON.check+'<span>Added</span>'})
+    : el('button',{class:'btn', title:'Add to workbench', html:ICON.plus+'<span>Add</span>', onclick:()=>importAsanaTask(at)});
+
+  return el('div',{class:'task asana-task'},[ col, btn ]);
 }
 
 /* ============================================================
