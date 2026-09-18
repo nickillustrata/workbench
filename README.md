@@ -13,10 +13,10 @@ repo per brand rule zero).
 ```bash
 npm install
 npm run dev        # local dev at http://localhost:5173
-npm run build      # typecheck + build to dist/ (commit dist/ to deploy)
+npm run build      # typecheck + build to docs/ (committed; GitHub Pages serves main:/docs)
 ```
 
-The build uses relative paths (`base: './'`), so `dist/` works from any
+The build uses relative paths (`base: './'`), so `docs/` works from any
 static host or straight off the filesystem.
 
 ## Storage
