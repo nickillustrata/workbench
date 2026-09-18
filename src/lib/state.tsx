@@ -61,3 +61,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   return <StateCtx.Provider value={{ state, update }}>{children}</StateCtx.Provider>
 }
+
+/** Records a link click (for the Most Used bar) — call from every <a> that
+    opens a saved link. Navigation proceeds normally; this just counts. */
+export function useLinkClick() {
+  const { update } = useApp()
+  return useCallback(
+    (itemId: string) => {
+      update((d) => {
+        for (const g of d.links) {
+          const it = g.items.find((i) => i.id === itemId)
+          if (it) {
+            it.hits = (it.hits ?? 0) + 1
+            it.lastUsedAt = Date.now()
+            return
+          }
+        }
+      })
+    },
+    [update],
+  )
+}

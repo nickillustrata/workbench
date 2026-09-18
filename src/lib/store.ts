@@ -131,6 +131,8 @@ function transformV1(v1: V1State): AppState {
           id: i.id,
           label: i.label,
           url: i.url,
+          hits: 0,
+          lastUsedAt: null,
         })),
       })),
       notes: [],
@@ -148,8 +150,8 @@ function seed(): AppState {
         id: uid(),
         name: 'Tools',
         items: [
-          { id: uid(), label: 'GitHub', url: 'https://github.com' },
-          { id: uid(), label: 'Supabase', url: 'https://supabase.com/dashboard' },
+          { id: uid(), label: 'GitHub', url: 'https://github.com', hits: 0, lastUsedAt: null },
+          { id: uid(), label: 'Supabase', url: 'https://supabase.com/dashboard', hits: 0, lastUsedAt: null },
         ],
       },
     ],
@@ -165,6 +167,12 @@ export function normalize(s: AppState): AppState {
   s.notes ??= []
   s.categories ??= []
   s.clients ??= []
+  s.links.forEach((g) =>
+    g.items.forEach((i) => {
+      i.hits ??= 0
+      i.lastUsedAt ??= null
+    }),
+  )
   s.tasks.forEach((t) => {
     t.status ??= 'backlog'
     t.priority ??= null

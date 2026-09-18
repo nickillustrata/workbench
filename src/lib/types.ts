@@ -27,6 +27,9 @@ export interface LinkItem {
   id: string
   label: string
   url: string
+  /** click count — powers the Most Used bar */
+  hits: number
+  lastUsedAt: number | null
 }
 
 export interface LinkGroup {

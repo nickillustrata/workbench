@@ -6,6 +6,8 @@ import {
   type Transition,
 } from 'motion/react'
 import {
+  Check,
+  ChevronDown,
   ChevronRight,
   ExternalLink,
   Pencil,
@@ -15,7 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { useApp } from '../lib/state'
+import { useApp, useLinkClick } from '../lib/state'
 import { uid, type LinkGroup, type LinkItem } from '../lib/types'
 import { Btn } from '../components/ui'
 
@@ -50,6 +52,7 @@ function Favicon({ url, size = 24 }: { url: string; size?: number }) {
 export function QuickLinks() {
   const { state, update } = useApp()
   const [q, setQ] = useState('')
+  const [newGroupId, setNewGroupId] = useState<string | null>(null)
   const query = q.trim().toLowerCase()
 
   const filtered = useMemo(() => {
@@ -67,11 +70,11 @@ export function QuickLinks() {
   }, [state.links, query])
 
   const addGroup = () => {
-    const name = window.prompt('Group name')
-    if (!name?.trim()) return
+    const id = uid()
     update((d) => {
-      d.links.push({ id: uid(), name: name.trim(), items: [] })
+      d.links.push({ id, name: 'New group', items: [] })
     })
+    setNewGroupId(id)
   }
 
   return (
@@ -87,6 +90,8 @@ export function QuickLinks() {
           <Plus size={16} /> New group
         </Btn>
       </div>
+
+      <MostUsedBar />
 
       <div className="relative mb-8 max-w-[440px]">
         <Search
@@ -106,7 +111,11 @@ export function QuickLinks() {
       ) : (
         <div className="columns-1 gap-4 md:columns-2 xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid">
           {state.links.map((group) => (
-            <GroupCard key={group.id} group={group} />
+            <GroupCard
+              key={group.id}
+              group={group}
+              startRenaming={group.id === newGroupId}
+            />
           ))}
           {state.links.length === 0 && (
             <p className="text-[14px] text-subtle">
@@ -119,7 +128,54 @@ export function QuickLinks() {
   )
 }
 
+/* Most-used links, ranked by click count (tracked on every open). */
+function MostUsedBar() {
+  const { state } = useApp()
+  const onLinkClick = useLinkClick()
+
+  const top = useMemo(
+    () =>
+      state.links
+        .flatMap((g) => g.items)
+        .filter((i) => (i.hits ?? 0) > 0)
+        .sort(
+          (a, b) =>
+            (b.hits ?? 0) - (a.hits ?? 0) ||
+            (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0),
+        )
+        .slice(0, 8),
+    [state.links],
+  )
+
+  if (top.length === 0) return null
+
+  return (
+    <div className="mb-6">
+      <div className="section-title mb-2">Most Used</div>
+      <div className="flex flex-wrap gap-2">
+        {top.map((item) => (
+          <a
+            key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => onLinkClick(item.id)}
+            title={`${item.label} · ${item.hits} open${item.hits === 1 ? '' : 's'}`}
+            className="flex items-center gap-2 rounded-[4px] border border-hairline bg-white py-1.5 pr-3 pl-2 shadow-brand-xs transition-colors hover:border-blue"
+          >
+            <Favicon url={item.url} size={18} />
+            <span className="max-w-[140px] truncate text-[13px] font-semibold text-ink">
+              {item.label}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SearchResults({ groups }: { groups: LinkGroup[] }) {
+  const onLinkClick = useLinkClick()
   return (
     <div className="flex flex-col gap-6">
       {groups.map((g) => (
@@ -132,6 +188,7 @@ function SearchResults({ groups }: { groups: LinkGroup[] }) {
                 href={item.url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => onLinkClick(item.id)}
                 className="flex items-center gap-3 rounded-[4px] border border-hairline bg-white px-3 py-2.5 shadow-brand-xs transition-colors hover:border-blue"
               >
                 <Favicon url={item.url} />
@@ -158,23 +215,38 @@ function SearchResults({ groups }: { groups: LinkGroup[] }) {
 
 /* ---------- disclosure group card ---------- */
 
-function GroupCard({ group }: { group: LinkGroup }) {
+function GroupCard({
+  group,
+  startRenaming = false,
+}: {
+  group: LinkGroup
+  startRenaming?: boolean
+}) {
   const { update } = useApp()
-  const [expanded, setExpanded] = useState(false)
+  const onLinkClick = useLinkClick()
+  const [expanded, setExpanded] = useState(startRenaming)
   const [editing, setEditing] = useState<LinkItem | 'new' | null>(null)
+  const [renaming, setRenaming] = useState(startRenaming)
+  const [nameDraft, setNameDraft] = useState(group.name)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const renameGroup = () => {
-    const name = window.prompt('Rename group', group.name)
-    if (!name?.trim()) return
-    update((d) => {
-      const g = d.links.find((x) => x.id === group.id)
-      if (g) g.name = name.trim()
-    })
+  const startRename = () => {
+    setNameDraft(group.name)
+    setRenaming(true)
+  }
+
+  const commitRename = () => {
+    const name = nameDraft.trim()
+    if (name && name !== group.name) {
+      update((d) => {
+        const g = d.links.find((x) => x.id === group.id)
+        if (g) g.name = name
+      })
+    }
+    setRenaming(false)
   }
 
   const deleteGroup = () => {
-    if (!window.confirm(`Delete group “${group.name}” and its ${group.items.length} links?`))
-      return
     update((d) => {
       d.links = d.links.filter((x) => x.id !== group.id)
     })
@@ -239,37 +311,94 @@ function GroupCard({ group }: { group: LinkGroup }) {
               className="flex flex-col gap-2 p-4"
             >
               <motion.div layout className="mb-1 flex items-center gap-2">
-                <motion.div
-                  layoutId={`gtitle-${group.id}`}
-                  layout="position"
-                  className="section-title flex-1 truncate text-[14px]"
-                >
-                  {group.name}
-                </motion.div>
-                <button
-                  type="button"
-                  onClick={renameGroup}
-                  title="Rename group"
-                  className="cursor-pointer rounded-[3px] p-1 text-subtle hover:bg-stripe hover:text-navy"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={deleteGroup}
-                  title="Delete group"
-                  className="cursor-pointer rounded-[3px] p-1 text-subtle hover:bg-[#fcecec] hover:text-danger"
-                >
-                  <Trash2 size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpanded(false)}
-                  className="flex size-6 cursor-pointer items-center justify-center rounded-full bg-navy text-white"
-                >
-                  <X size={13} strokeWidth={3} />
-                </button>
+                {renaming ? (
+                  <form
+                    className="flex min-w-0 flex-1 items-center gap-1.5"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      commitRename()
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => e.key === 'Escape' && setRenaming(false)}
+                      className="section-title h-[28px] min-w-0 flex-1 rounded-[3px] border-[1.5px] border-blue bg-white px-2 text-[14px] focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      title="Save name"
+                      className="flex size-6 flex-none cursor-pointer items-center justify-center rounded-full bg-blue text-white"
+                    >
+                      <Check size={13} strokeWidth={3} />
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <motion.div
+                      layoutId={`gtitle-${group.id}`}
+                      layout="position"
+                      className="section-title flex-1 truncate text-[14px]"
+                    >
+                      {group.name}
+                    </motion.div>
+                    <button
+                      type="button"
+                      onClick={startRename}
+                      title="Rename group"
+                      className="cursor-pointer rounded-[3px] p-1 text-subtle hover:bg-stripe hover:text-navy"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(true)}
+                      title="Delete group"
+                      className="cursor-pointer rounded-[3px] p-1 text-subtle hover:bg-[#fcecec] hover:text-danger"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(false)}
+                      title="Collapse group"
+                      className="flex size-6 cursor-pointer items-center justify-center rounded-full bg-navy text-white"
+                    >
+                      <ChevronDown size={14} strokeWidth={3} className="rotate-180" />
+                    </button>
+                  </>
+                )}
               </motion.div>
+
+              {confirmingDelete && (
+                <div className="mb-1 flex items-center justify-between gap-2 rounded-[4px] border border-danger/40 bg-[#fcecec] px-3 py-2">
+                  <span className="text-[12.5px] font-semibold text-danger">
+                    Delete “{group.name}”
+                    {group.items.length > 0 &&
+                      ` and its ${group.items.length} link${group.items.length === 1 ? '' : 's'}`}
+                    ?
+                  </span>
+                  <span className="flex flex-none gap-1.5">
+                    <button
+                      type="button"
+                      onClick={deleteGroup}
+                      className="cursor-pointer rounded-[3px] bg-danger px-2.5 py-1 text-[12px] font-bold text-white hover:opacity-90"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(false)}
+                      className="cursor-pointer rounded-[3px] border border-hairline-strong bg-white px-2.5 py-1 text-[12px] font-semibold text-muted hover:text-ink"
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                </div>
+              )}
 
               {group.items.map((item) => (
                 <div key={item.id} className="group flex items-center gap-2.5">
@@ -283,6 +412,7 @@ function GroupCard({ group }: { group: LinkGroup }) {
                     href={item.url}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={() => onLinkClick(item.id)}
                     className="min-w-0 flex-1"
                   >
                     <motion.p
@@ -366,6 +496,8 @@ function LinkEditor({
           id: uid(),
           label: label.trim() || host(cleanUrl),
           url: cleanUrl,
+          hits: 0,
+          lastUsedAt: null,
         })
       }
     })

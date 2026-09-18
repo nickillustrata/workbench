@@ -11,7 +11,7 @@ import Wordmark from './components/Wordmark'
 import { Dashboard } from './views/Dashboard'
 import { QuickLinks } from './views/QuickLinks'
 import { Planner } from './views/Planner'
-import { useApp } from './lib/state'
+import { useApp, useLinkClick } from './lib/state'
 import { fmtDue } from './lib/types'
 
 export type Tab = 'dashboard' | 'quicklink' | 'planner'
@@ -157,6 +157,7 @@ function TopBar({ onNav }: { onNav: (t: Tab) => void }) {
 
 function SearchResults({ q, onGo }: { q: string; onGo: (t: Tab) => void }) {
   const { state } = useApp()
+  const onLinkClick = useLinkClick()
   const query = q.trim().toLowerCase()
 
   const results = useMemo(() => {
@@ -200,6 +201,7 @@ function SearchResults({ q, onGo }: { q: string; onGo: (t: Tab) => void }) {
               href={l.url}
               target="_blank"
               rel="noreferrer"
+              onClick={() => onLinkClick(l.id)}
               className="flex items-baseline justify-between gap-3 px-4 py-1.5 hover:bg-stripe"
             >
               <span className="truncate text-[14px] font-semibold text-blue">

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { ArrowRight, ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
-import { useApp } from '../lib/state'
+import { useApp, useLinkClick } from '../lib/state'
 import { daysUntil, fmtDue, todayISO, type Task } from '../lib/types'
 import type { Tab } from '../App'
 import { Badge } from '../components/ui'
@@ -16,6 +16,7 @@ const host = (url: string) => {
 
 export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
   const { state } = useApp()
+  const onLinkClick = useLinkClick()
 
   const stats = useMemo(() => {
     const open = state.tasks.filter((t) => t.status !== 'done')
@@ -38,7 +39,11 @@ export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
   }, [state.tasks])
 
   const linkCount = state.links.reduce((n, g) => n + g.items.length, 0)
-  const topLinks = state.links.flatMap((g) => g.items).slice(0, 8)
+  // most-used first; unclicked links keep their saved order after
+  const topLinks = state.links
+    .flatMap((g) => g.items)
+    .sort((a, b) => (b.hits ?? 0) - (a.hits ?? 0))
+    .slice(0, 8)
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-6 pt-8 pb-16">
@@ -109,6 +114,7 @@ export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
                   href={l.url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => onLinkClick(l.id)}
                   className="flex items-center gap-2.5 rounded-[4px] border border-hairline px-2.5 py-2 transition-colors hover:border-blue"
                 >
                   <img
