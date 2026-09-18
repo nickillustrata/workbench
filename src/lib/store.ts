@@ -133,6 +133,7 @@ function transformV1(v1: V1State): AppState {
           url: i.url,
           hits: 0,
           lastUsedAt: null,
+          fav: false,
         })),
       })),
       notes: [],
@@ -150,8 +151,8 @@ function seed(): AppState {
         id: uid(),
         name: 'Tools',
         items: [
-          { id: uid(), label: 'GitHub', url: 'https://github.com', hits: 0, lastUsedAt: null },
-          { id: uid(), label: 'Supabase', url: 'https://supabase.com/dashboard', hits: 0, lastUsedAt: null },
+          { id: uid(), label: 'GitHub', url: 'https://github.com', hits: 0, lastUsedAt: null, fav: false },
+          { id: uid(), label: 'Supabase', url: 'https://supabase.com/dashboard', hits: 0, lastUsedAt: null, fav: false },
         ],
       },
     ],
@@ -171,6 +172,7 @@ export function normalize(s: AppState): AppState {
     g.items.forEach((i) => {
       i.hits ??= 0
       i.lastUsedAt ??= null
+      i.fav ??= false
     }),
   )
   s.tasks.forEach((t) => {

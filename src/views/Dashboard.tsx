@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ArrowRight, ExternalLink } from 'lucide-react'
+import { ArrowRight, ExternalLink, Star } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp, useLinkClick } from '../lib/state'
 import { daysUntil, fmtDue, todayISO, type Task } from '../lib/types'
@@ -39,11 +39,7 @@ export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
   }, [state.tasks])
 
   const linkCount = state.links.reduce((n, g) => n + g.items.length, 0)
-  // most-used first; unclicked links keep their saved order after
-  const topLinks = state.links
-    .flatMap((g) => g.items)
-    .sort((a, b) => (b.hits ?? 0) - (a.hits ?? 0))
-    .slice(0, 8)
+  const favorites = state.links.flatMap((g) => g.items).filter((i) => i.fav)
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-6 pt-8 pb-16">
@@ -92,10 +88,13 @@ export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
           )}
         </section>
 
-        {/* quick links */}
+        {/* favorites */}
         <section className="rounded-[4px] border border-hairline bg-white p-6 shadow-brand-sm">
           <div className="mb-4 flex items-center justify-between">
-            <span className="section-title">Quick Links</span>
+            <span className="section-title flex items-center gap-1.5">
+              <Star size={13} className="text-gold" fill="currentColor" />
+              Favorites
+            </span>
             <button
               type="button"
               onClick={() => onNav('quicklink')}
@@ -104,11 +103,14 @@ export function Dashboard({ onNav }: { onNav: (t: Tab) => void }) {
               All links <ArrowRight size={13} />
             </button>
           </div>
-          {topLinks.length === 0 ? (
-            <p className="text-[14px] text-subtle">No links saved yet.</p>
+          {favorites.length === 0 ? (
+            <p className="text-[14px] text-subtle">
+              Nothing starred yet — hit the star next to a link in QuickLink
+              to pin it here.
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {topLinks.map((l) => (
+              {favorites.map((l) => (
                 <a
                   key={l.id}
                   href={l.url}

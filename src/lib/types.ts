@@ -30,6 +30,8 @@ export interface LinkItem {
   /** click count — powers the Most Used bar */
   hits: number
   lastUsedAt: number | null
+  /** starred — pinned to the Dashboard Favorites panel */
+  fav: boolean
 }
 
 export interface LinkGroup {

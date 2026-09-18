@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Star,
   Trash2,
   X,
 } from 'lucide-react'
@@ -109,7 +110,14 @@ export function QuickLinks() {
       {filtered ? (
         <SearchResults groups={filtered} />
       ) : (
-        <div className="columns-1 gap-4 md:columns-2 xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid">
+        <div
+          className="columns-1 gap-4 md:columns-2 xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid"
+          /* accept drags over the gaps between cards too, or drops near
+             card edges are silently refused */
+          onDragEnter={(e) => e.preventDefault()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => e.preventDefault()}
+        >
           {state.links.map((group) => (
             <GroupCard
               key={group.id}
@@ -229,6 +237,16 @@ function GroupCard({
   const [renaming, setRenaming] = useState(startRenaming)
   const [nameDraft, setNameDraft] = useState(group.name)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const [dropPos, setDropPos] = useState<'before' | 'after' | null>(null)
+
+  const toggleFav = (itemId: string) =>
+    update((d) => {
+      const it = d.links
+        .find((x) => x.id === group.id)
+        ?.items.find((i) => i.id === itemId)
+      if (it) it.fav = !it.fav
+    })
 
   const startRename = () => {
     setNameDraft(group.name)
@@ -254,6 +272,52 @@ function GroupCard({
 
   return (
     <MotionConfig transition={spring}>
+      {/* plain div carries native HTML5 DnD — motion.div would swallow
+          onDragStart/onDragEnd as its own gesture props */}
+      <div
+        draggable={!renaming && !editing}
+        onDragStart={(e) => {
+          // links, inputs, and text stay non-draggable; the card itself drags
+          if ((e.target as HTMLElement).closest('a, input, textarea')) {
+            e.preventDefault()
+            return
+          }
+          e.dataTransfer.setData('text/group-id', group.id)
+          e.dataTransfer.effectAllowed = 'move'
+          setDragging(true)
+        }}
+        onDragEnd={() => setDragging(false)}
+        onDragEnter={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          // accept unconditionally; drop validates the payload
+          e.preventDefault()
+          const r = e.currentTarget.getBoundingClientRect()
+          setDropPos(e.clientY < r.top + r.height / 2 ? 'before' : 'after')
+        }}
+        onDragLeave={() => setDropPos(null)}
+        onDrop={(e) => {
+          e.preventDefault()
+          const id = e.dataTransfer.getData('text/group-id')
+          const pos = dropPos
+          setDropPos(null)
+          if (!id || id === group.id) return
+          update((d) => {
+            const from = d.links.findIndex((g) => g.id === id)
+            if (from < 0) return
+            const [moved] = d.links.splice(from, 1)
+            let to = d.links.findIndex((g) => g.id === group.id)
+            if (pos === 'after') to += 1
+            d.links.splice(to, 0, moved)
+          })
+        }}
+        className={clsx(
+          'rounded-[6px]',
+          !renaming && !editing && 'cursor-grab active:cursor-grabbing',
+          dragging && 'opacity-40',
+          dropPos === 'before' && 'shadow-[0_-3px_0_0_#016BD6]',
+          dropPos === 'after' && 'shadow-[0_3px_0_0_#016BD6]',
+        )}
+      >
       <motion.div
         layout
         className="overflow-hidden rounded-[6px] border border-hairline bg-white shadow-brand-sm"
@@ -428,6 +492,19 @@ function GroupCard({
                   </a>
                   <button
                     type="button"
+                    onClick={() => toggleFav(item.id)}
+                    title={item.fav ? 'Remove from favorites' : 'Add to favorites'}
+                    className={clsx(
+                      'cursor-pointer rounded-[3px] p-1 transition-opacity',
+                      item.fav
+                        ? 'text-gold'
+                        : 'text-subtle opacity-0 group-hover:opacity-100 hover:text-gold',
+                    )}
+                  >
+                    <Star size={14} fill={item.fav ? 'currentColor' : 'none'} />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setEditing(item)}
                     className="cursor-pointer rounded-[3px] p-1 text-subtle opacity-0 transition-opacity group-hover:opacity-100 hover:bg-stripe hover:text-navy"
                   >
@@ -457,6 +534,7 @@ function GroupCard({
           )}
         </AnimatePresence>
       </motion.div>
+      </div>
     </MotionConfig>
   )
 }
@@ -498,6 +576,7 @@ function LinkEditor({
           url: cleanUrl,
           hits: 0,
           lastUsedAt: null,
+          fav: false,
         })
       }
     })
