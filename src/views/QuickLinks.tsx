@@ -128,7 +128,8 @@ export function QuickLinks() {
   )
 }
 
-/* Most-used links, ranked by click count (tracked on every open). */
+/* Most-used links, ranked by click count (tracked on every open).
+   Until clicks accumulate, unclicked links fill the row in saved order. */
 function MostUsedBar() {
   const { state } = useApp()
   const onLinkClick = useLinkClick()
@@ -137,7 +138,6 @@ function MostUsedBar() {
     () =>
       state.links
         .flatMap((g) => g.items)
-        .filter((i) => (i.hits ?? 0) > 0)
         .sort(
           (a, b) =>
             (b.hits ?? 0) - (a.hits ?? 0) ||
